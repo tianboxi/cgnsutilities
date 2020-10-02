@@ -1,0 +1,7 @@
+*.DS_Store
+inputFiles/
+*.o
+*.swp
+*.mod
+*.so
+tags
