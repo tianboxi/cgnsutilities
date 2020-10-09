@@ -8,7 +8,8 @@ BCval = list(BCdic.values())
 print(BCdic)
 
 # Read a grid
-grid = cu.readGrid('./inputFiles/grid_absper_vis_latest.cgns')
+grid = cu.readGrid('./inputFiles/grid_absper_vis_latest_output.cgns')
+#grid = cu.readGrid('./inputFiles/naca0012.cgns')
 # Print some info
 grid.printInfo()
 grid.printBlockInfo()
@@ -40,7 +41,10 @@ for i,boco in enumerate(blk1.bocos):
       if nddirch>=1:
          print(' +++ Data Set 1 +++')
          dirchdata = dset.dirichletArrays[0]
+         dataname = dirchdata.name.decode('utf8').strip()
          print('ArrayName: ', dirchdata.name.decode('utf8').strip())
+         if dataname == 'Pressure':
+            dirchdata.dataArr =np.array([101325])
          print('ArrayNDim: ', dirchdata.nDimensions)
          print('ArrayDtype: ', dirchdata.dataType)
          print('ArrayDDim: ', dirchdata.dataDimensions)
