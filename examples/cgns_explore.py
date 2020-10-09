@@ -60,6 +60,11 @@ for b2b in blk1.B2Bs:
 #  print('range:',  b2b.ptRange)
 #   print('donor range: ', b2b.donorRange)
    print('transform: ', b2b.transform)
+   print('ifperiodic: ', b2b.periodic)
+   if b2b.periodic:
+      print('rotCenter', b2b.rotCenter)
+      print('rotAngles', b2b.rotAngles)
+      print('translation', b2b.trans)
 
-#grid.writeToCGNS('./inputFiles/grid_absper_vis_latest_output.cgns')
+grid.writeToCGNS('./inputFiles/grid_absper_vis_latest_output.cgns')
 

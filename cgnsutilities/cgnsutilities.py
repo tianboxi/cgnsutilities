@@ -1477,7 +1477,9 @@ class Block(object):
         for b2b in self.B2Bs:
             libcgns_utils.utils.writeb2b(cg, zoneID, b2b.name, b2b.donorName,
                                          b2b.ptRange, b2b.donorRange,
-                                         b2b.transform)
+                                         b2b.transform, b2b.periodic,
+                                         b2b.rotCenter, b2b.rotAngles,
+                                         b2b.trans)
 
     def writeDimsPlot3d(self, f):
         """Write dimensions to a plot3d file"""
@@ -2300,12 +2302,17 @@ class B2B(object):
         donor block that corresponds to the ith axis in the owner block. If the
         blocks are perfectly aligned, transform = [1, 2, 3].
     """
-    def __init__(self, connectName, donorName, ptRange, donorRange, transform):
+    def __init__(self, connectName, donorName, ptRange, donorRange, transform, 
+                 periodic, rotCenter, rotAngles, trans):
         self.name = connectName.strip()
         self.donorName = donorName.strip()
         self.ptRange = ptRange
         self.donorRange = donorRange
         self.transform = transform
+        self.periodic = periodic
+        self.rotCenter = rotCenter
+        self.rotAngles = rotAngles
+        self.trans = trans
 
     def coarsen(self,direction):
         """Coarsen the range of the B2B along the specified direction"""
@@ -2680,10 +2687,11 @@ def readGrid(fileName):
             blk.addBoco(bc)
 
         for iB2B in range(1, nB2B+1):
-            connectName, donorName, ptRange, donorRange, transform = \
+            connectName, donorName, ptRange, donorRange, transform, periodic, \
+                rotCenter, rotAngles, trans = \
                 libcgns_utils.utils.getb2binfo(inFile, iBlock, iB2B)
             blk.addB2B(B2B(connectName, donorName, ptRange, donorRange,
-                           transform))
+                           transform, periodic, rotCenter, rotAngles, trans))
 
         newGrid.addBlock(blk)
 

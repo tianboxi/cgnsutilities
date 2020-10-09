@@ -72,7 +72,7 @@ python module libcgns_utils ! in
             real(kind=8) intent(inout), dimension(ndataarr) :: dataarr
             integer intent(in) :: ndataarr
         end subroutine getbcdataarray
-        subroutine getb2binfo(cg,iblock,ib2b,connectname,donorname,ptrange,donorrange,transform) ! in :libcgns_utils:cgns_utilities.F90
+        subroutine getb2binfo(cg,iblock,ib2b,connectname,donorname,ptrange,donorrange,transform,periodic,rotCenter,rotAngles,trans) ! in :libcgns_utils:cgns_utilities.F90
             integer intent(in) :: cg
             integer intent(in) :: iblock
             integer intent(in) :: ib2b
@@ -81,6 +81,9 @@ python module libcgns_utils ! in
             integer dimension(3,2),intent(out) :: ptrange
             integer dimension(3,2),intent(out) :: donorrange
             integer dimension(3),intent(out) :: transform
+            logical, intent(out) :: periodic
+            real(kind=8), intent(out) :: rotCenter(3), rotAngles(3)
+            real(kind=8), intent(out) :: trans(3)
         end subroutine getb2binfo
         subroutine getconvinfo(cg, niterations, narrays) ! in :libcgns_utils:cgns_utilities.F90
             integer intent(in) :: cg
@@ -146,7 +149,7 @@ python module libcgns_utils ! in
             real(kind=8), intent(in), dimension(ndataarr) :: dataarr
             integer intent(in) :: ndataarr
         end subroutine writebcdata
-        subroutine writeb2b(cg,iblock,connectname,donorname,pts,ptsdonor,transform) ! in :libcgns_utils:cgns_utilities.F90
+        subroutine writeb2b(cg,iblock,connectname,donorname,pts,ptsdonor,transform,periodic,rotCenter,rotAngles,trans)! in :libcgns_utils:cgns_utilities.F90
             integer intent(in) :: cg
             integer intent(in) :: iblock
             character*(*) intent(in) :: connectname
@@ -154,6 +157,9 @@ python module libcgns_utils ! in
             integer dimension(3,2),intent(in) :: pts
             integer dimension(3,2),intent(in) :: ptsdonor
             integer dimension(3),intent(in) :: transform
+            logical, intent(in) :: periodic
+            real(kind=8), intent(in) :: rotCenter(3), rotAngles(3)
+            real(kind=8), intent(in) :: trans(3)
         end subroutine writeb2b
         subroutine refine(xin,xout, refinex, refiney, refinez,il,jl,kl)
             ! in :libcgns_utils:cgns_utilities.F90

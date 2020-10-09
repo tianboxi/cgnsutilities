@@ -356,7 +356,8 @@ contains
 
   end subroutine getBCDataArray
 
-  subroutine getB2BInfo(cg, iBlock, iB2B, connectName, donorName, ptRange, donorRange, transform)
+  subroutine getB2BInfo(cg, iBlock, iB2B, connectName, donorName, ptRange, &
+             donorRange, transform, periodic, rotCenter, rotAngles, trans)
     ! Get the block to block connection information for 'iB2B' condition
     ! on block 'iBlock'. We return sufficient information to recreate
     ! this boundary condition.
@@ -367,10 +368,16 @@ contains
     integer, intent(in) :: cg, iBlock, iB2B
     integer, intent(out) :: transform(3), ptRange(3, 2), donorRange(3, 2)
     character(len=256), intent(out) :: connectName, donorName
+    logical, intent(out) :: periodic
+    real(kind=8), intent(out) :: rotCenter(3), rotAngles(3)
+    real(kind=8), intent(out) :: trans(3)
 
     ! Working
     integer :: ier, base
     integer(kind=cgsize_t) :: c_ptRange(3,2), c_DonorRange(3,2)
+    real(kind=4) :: rotCenter_c(3), rotAngles_c(3)
+    real(kind=4) :: trans_c(3)
+    
 
     base = 1
     call cg_goto_f(cg, base, ier, 'end')
@@ -382,6 +389,20 @@ contains
     donorRange = c_donorRange
     ptRange = c_ptRange
 
+    ! Read periodic 1-to-1 connection
+    call cg_1to1_periodic_read_f(cg, base, iBlock, iB2B, rotCenter_c, rotAngles_c, trans_c, ier)
+    if(ier .ne. CG_ERROR) then
+       periodic = .true.
+       rotCenter = rotCenter_c
+       rotAngles = rotAngles_c
+       trans = trans_c
+    else
+       periodic = .false.
+       rotCenter = 0.0 
+       rotAngles = 0.0
+       trans = 0.0
+    endif
+       
   end subroutine getB2BInfo
 
   subroutine getConvInfo(cg, niterations, narrays)
@@ -687,18 +708,24 @@ contains
   end subroutine writeBCData
 
 
-  subroutine writeB2B(cg, iBlock, connectName, donorName, pts, ptsDonor, transform)
+  subroutine writeB2B(cg, iBlock, connectName, donorName, pts, ptsDonor, &
+                     transform, periodic, rotCenter, rotAngles, trans)
 
     implicit none
 
     ! Input/Output
     integer, intent(in) :: cg, iBlock, pts(3, 2), ptsDonor(3, 2)
     integer, intent(in) :: transform(3)
+    logical, intent(in) :: periodic
+    real(kind=8), intent(in) :: rotCenter(3), rotAngles(3)
+    real(kind=8), intent(in) :: trans(3)
     character*(*), intent(in) :: connectName, donorName
 
     ! Working
     integer :: ier, base, nCon
     integer(kind=cgsize_t), dimension(3,2) :: c_pts, c_ptsDonor
+    real(kind=4) :: rotCenter_c(3), rotAngles_c(3)
+    real(kind=4) :: trans_c(3)
     base = 1
 
     c_pts = pts
@@ -706,6 +733,14 @@ contains
     call cg_1to1_write_f(cg, base, iBlock, connectName, donorName, c_pts, &
          c_ptsDonor, transform, nCon, ier)
     if (ier .eq. CG_ERROR) call cg_error_exit_f
+
+    if (periodic) then
+       rotCenter_c = rotCenter
+       rotAngles_c = rotAngles
+       trans_c = trans
+       call cg_1to1_periodic_write_f(cg, base, iBlock, nCon, rotCenter_c, rotAngles_c, trans_c, ier)
+       if (ier .eq. CG_ERROR) call cg_error_exit_f
+    endif
 
   end subroutine writeB2B
 
