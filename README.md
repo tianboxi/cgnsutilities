@@ -49,3 +49,11 @@ To get further help for a sub-command, type for example:
 ## License
 
 Copyright 2020 MDO Lab. See the LICENSE file for details
+
+## new features in this fork
+
+- Set BC by family name
+- Set SubsonicInflowBC
+- Set SubsonicOutflowBC
+- Read and wirte periodic 1to1 connection (B2B)
+- Set periodic 1to1 connection
