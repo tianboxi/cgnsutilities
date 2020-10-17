@@ -29,7 +29,8 @@ BC = {'bcfarfield':7,
       'bcinflow':9,
       'bcinflowsubsonic':10,
       'bcinflowssupersonic':11,
-      'bcoverset':1} #The Overset BC will be considered as a CG_USERDEFINED option ()
+      'bcoverset':1,
+      'bcnotvalid':25} #The Overset BC will be considered as a CG_USERDEFINED option ()
 
 BCDATATYPE = {"Dirichlet" : 2,
               "Neumann"   : 3}
@@ -99,10 +100,12 @@ class Grid(object):
         print('Wall Boundary Nodes:', boundaryNodes)
 
 
-    def printBlockInfo(self):
+    def printBlockInfo(self, detail=False):
         """Print some information on each block to screen.
         This info can be helpful assessing overset meshes"""
-
+        BClist = list(BC.keys())
+        BCval = list(BC.values())
+        print(' =========== begin Block Basic Info ===============')
         totalCells = 0
         totalNodes = 0
         counter = 1
@@ -119,6 +122,54 @@ class Grid(object):
         print('Total Zones:', len(self.blocks))
         print('Total Cells:', totalCells)
         print('Total Nodes:', totalNodes)
+        print(' =========== end Block Basic Info ===============')
+        if detail:
+
+           for blk in self.blocks:
+              print(' =========== begin BC Info ===============')
+              for i,boco in enumerate(blk.bocos):
+                 print('BC#'+str(i)+': ')
+                 print('Name: ',boco.name.decode('utf8').strip())
+                 print('Type: ',boco.type,BClist[BCval.index(boco.type)])
+                 print('Family: ', boco.family.decode('utf8').strip())
+                 ndset = len(boco.dataSets)
+                 print('Ndatasets: ', ndset)
+                 #print('PtRange:',boco.ptRange)
+                 if ndset >= 1:
+                    for dset in boco.dataSets:
+                       print('Dname: ',dset.name.decode('utf8').strip())
+                       print('Dtype: ',dset.type)
+                       nddirch = len(dset.dirichletArrays)
+                       ndneuma = len(dset.neumannArrays)
+                       print('nDirichlet: ',nddirch)
+                       print('nNeumann: ',ndneuma)
+                       if nddirch>=1:
+                          for arr in dset.dirichletArrays:
+                             print(' - data array -')
+                             dataname = arr.name.decode('utf8').strip()
+                             print('ArrayName: ', arr.name.decode('utf8').strip())
+                             print('ArrayNDim: ', arr.nDimensions)
+                             print('ArrayDtype: ', arr.dataType)
+                             print('ArrayDDim: ', arr.dataDimensions)
+                             print('Array: ', arr.dataArr)
+                             print('NP arrary shp', arr.dataArr.shape)
+                 print(' ++++++ end BC  ++++++')
+              print(' =========== end BC Info ===============')
+
+              print(' =========== begin B2B Info===============')
+              for blk in self.blocks:
+                 nb2b = len(blk.B2Bs)
+                 print('# Number of Block to Block connection: ', nb2b)
+                 for b2b in blk.B2Bs:
+                    print('Name: ',b2b.name.decode('utf8').strip())
+                    print('Donor name:', b2b.donorName.decode('utf8').strip())
+                    #print('range:',  b2b.ptRange)
+                    #print('donor range: ', b2b.donorRange)
+                    print('transform: ', b2b.transform)
+                    print('ifperiodic: ', bool(b2b.periodic))
+                    if b2b.periodic:
+                       print('rotCenter:', b2b.rotCenter,'rotAngles:', b2b.rotAngles, 'translation:', b2b.trans)
+              print(' =========== end B2B Info===============')
 
     def addBlock(self, blk):
 
@@ -1425,6 +1476,122 @@ class Grid(object):
         # This method just appends a new array data to the convergence history dictionary
         self.convArray[arrayName] = arrayData
 
+
+    def setBCFromFam(self, fam, bc):
+        '''
+        Set given familiy to be certain type of BC (no data set)
+        '''
+        nblk = len(self.blocks)
+        for blk in self.blocks:
+           nboco = len(blk.bocos)
+           for boco in blk.bocos:
+              famname = boco.family.decode('utf8').strip()
+              if famname == fam:
+                 boco.type = BC[bc.lower()]
+
+    def setBackPressure(self, fam, data, rotor=None):
+        '''
+        Set back pressure given a outflow fam name
+        '''
+        assert(len(data)==1)
+        nblk = len(self.blocks)
+        for blk in self.blocks:
+           nboco = len(blk.bocos)
+           for boco in blk.bocos:
+              famname = boco.family.decode('utf8').strip()
+              if famname == fam:
+                 boco.type = BC['bcoutflowsubsonic']
+                 boco.dataSets = []
+                 bp = BocoDataSet('BCDataSet',boco.type)
+                 boco.dataSets.append(bp)
+                 arr_p = BocoDataSetArray('Pressure', 4, 1, [1,1,1], numpy.array([data[0]]))
+                 boco.dataSets[0].dirichletArrays = []
+                 boco.dataSets[0].dirichletArrays.append(arr_p)
+    
+    def setInletCondition(self, fam, data, mdot=False, bli=False):
+        '''
+        Set total condition or mass flow condition for subsonic inlet given inflow fam name
+        '''
+        if not mdot:
+           assert(len(data)==5)
+        else:
+           assert(len(data)==4)
+        nblk = len(self.blocks)
+        for blk in self.blocks:
+           nboco = len(blk.bocos)
+           for boco in blk.bocos:
+              famname = boco.family.decode('utf8').strip()
+              if famname == fam:
+                 if not mdot:
+                    boco.type = BC['bcinflowsubsonic']
+                    boco.dataSets = []
+                    dset = BocoDataSet('BCDataSet',boco.type)
+                    boco.dataSets.append(dset)
+                    arr_pt = BocoDataSetArray('PressureStagnation', 4, 1, [1,1,1], numpy.array([data[0]]))
+                    arr_tt = BocoDataSetArray('TemperatureStagnation', 4, 1, [1,1,1], numpy.array([data[1]]))
+                    arr_vdirx = BocoDataSetArray('VelocityUnitVectorX', 4, 1, [1,1,1], numpy.array([data[2]]))
+                    arr_vdiry = BocoDataSetArray('VelocityUnitVectorY', 4, 1, [1,1,1], numpy.array([data[3]]))
+                    arr_vdirz = BocoDataSetArray('VelocityUnitVectorZ', 4, 1, [1,1,1], numpy.array([data[4]]))
+                    arrlist = [arr_pt,arr_tt,arr_vdirx,arr_vdiry,arr_vdirz]
+                    boco.dataSets[0].dirichletArrays = []
+                    for arr in arrlist:
+                       boco.dataSets[0].dirichletArrays.append(arr)
+                 else:
+                    boco.type = BC['bcinflowsubsonic']
+                    boco.dataSets = []
+                    dset = BocoDataSet('BCDataSet',boco.type)
+                    boco.dataSets.append(dset)
+                    arr_rho = BocoDataSetArray('Density', 4, 1, [1,1,1], numpy.array([data[0]]))
+                    arr_vx = BocoDataSetArray('VelocityX', 4, 1, [1,1,1], numpy.array([data[1]]))
+                    arr_vy = BocoDataSetArray('VelocityY', 4, 1, [1,1,1], numpy.array([data[2]]))
+                    arr_vz = BocoDataSetArray('VelocityZ', 4, 1, [1,1,1], numpy.array([data[3]]))
+                    arrlist = [arr_rho,arr_vx,arr_vy,arr_vz]
+                    boco.dataSets[0].dirichletArrays = []
+                    for arr in arrlist:
+                       boco.dataSets[0].dirichletArrays.append(arr)
+   
+    def setPeriodics(self,rotCenter=None,rotAngles=None,translation=None):
+       '''
+       Set periodic BCs
+       '''
+       nblk = len(self.blocks)
+       transform = [1,2,3]
+       # find bcs and get point range
+       for blk in self.blocks:
+          nboco = len(blk.bocos)
+          # find first periodic surf
+          for ib,boco in enumerate(blk.bocos):
+             famname = boco.family.decode('utf8').strip()
+             if famname == 'periodic1':
+                ptrange1 = boco.ptRange
+                blk.bocos.pop(ib)
+
+          # find second periodic surf
+          for ib,boco in enumerate(blk.bocos):
+             famname = boco.family.decode('utf8').strip()
+             if famname == 'periodic2':
+                ptrange2 = boco.ptRange
+                blk.bocos.pop(ib)
+
+          periodic=True
+          if not rotCenter:
+             rotCenter=[0.0,0.0,0.0]
+          
+          if not translation:
+             translation=[0.0,0.0,0.0]
+
+          if not rotAngles:
+             rotAngles1=[0.0,0.0,0.0]
+             rotAngles2=[0.0,0.0,0.0]
+          else:
+             rotAngles1 = rotAngles
+             rotAngles2 = [-1.0*ang for ang in rotAngles]
+
+          per1 = B2B('periodic1',blk.name,ptrange1,ptrange2,transform,periodic,rotCenter,rotAngles1,translation)     
+          per2 = B2B('periodic2',blk.name,ptrange2,ptrange1,transform,periodic,rotCenter,rotAngles2,translation)     
+          blk.B2Bs.append(per1)
+          blk.B2Bs.append(per2)
+    
 class Block(object):
     """Class for storing information related to a single block
     structured zone"""
@@ -1660,8 +1827,7 @@ class Block(object):
         """ This is a support function that member functions extrude and revolve call"""
 
         # Update current BCs
-        for boco in self.bocos:
-            # Find where we have zeros. That will indicate dimension that has not been updated
+        for boco in self.bocos: # Find where we have zeros. That will indicate dimension that has not been updated
             # We only need to check the last row of ptRange because the data actual data is always
             # in the first two rows
             if boco.ptRange[2, 0] == 0:
