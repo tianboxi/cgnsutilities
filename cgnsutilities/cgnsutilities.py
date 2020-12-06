@@ -1507,6 +1507,19 @@ class Grid(object):
                  arr_p = BocoDataSetArray('Pressure', 4, 1, [1,1,1], numpy.array([data[0]]))
                  boco.dataSets[0].dirichletArrays = []
                  boco.dataSets[0].dirichletArrays.append(arr_p)
+
+    def setOverset(self, fam):
+        '''
+        Set overset
+        '''
+        nblk = len(self.blocks)
+        for blk in self.blocks:
+           nboco = len(blk.bocos)
+           for boco in blk.bocos:
+              famname = boco.family.decode('utf8').strip()
+              if famname == fam:
+                 boco.type = BC['bcoverset']
+                 
     
     def setInletCondition(self, fam, data, mdot=False, bli=False):
         '''
