@@ -1134,10 +1134,11 @@ class Grid(object):
             if types[i] == 1: # B2B
                 connectName = 'SF%d'%i
                 donorName = self.blocks[donorIDs[i]-1].name
-
+                
                 self.blocks[blockID].B2Bs.append(B2B(
                     connectName, donorName, pointRanges[:, :, i],
-                    pointRangeDonors[:, :, i], transforms[:, i]))
+                    pointRangeDonors[:, :, i], transforms[:, i],
+                    False, [0.0]*3, [0.0]*3, [0.0]*3))
 
         # Return most of the information we computed since other
         # routines (autobc for example) may need this.
@@ -1628,7 +1629,7 @@ class Block(object):
         """ A  block-2-block connection to this block"""
         self.B2Bs.append(b2b)
 
-    def writeToCGNS(self, cg):
+    def writeToCGNS(self, cg, ifperiodic=False):
         """ Write all information in this block to the cg file handle"""
         zoneID = libcgns_utils.utils.writezone(cg, self.name, self.dims)
         libcgns_utils.utils.writecoordinates(cg, zoneID, self.coords)
@@ -3336,7 +3337,8 @@ def explodeByZoneName(grid):
 
     # Loop over each block in the input grid and obtain all zone names
     for blk in grid.blocks:
-        name = blk.name.split('.')[:-1]
+        name = blk.name.decode()
+        name = name.split('.')[:-1]
         name = '.'.join(name)
         nameList.append(name)
 
@@ -3352,7 +3354,8 @@ def explodeByZoneName(grid):
 
     # Add the blocks to the corresponding grid
     for blk in grid.blocks:
-        name = blk.name.split('.')[:-1]
+        name = blk.name.decode()
+        name = name.split('.')[:-1]
         name = '.'.join(name)
         gridDict[name].addBlock(blk)
 

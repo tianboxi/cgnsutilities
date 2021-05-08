@@ -391,7 +391,7 @@ contains
 
     ! Read periodic 1-to-1 connection
     call cg_1to1_periodic_read_f(cg, base, iBlock, iB2B, rotCenter_c, rotAngles_c, trans_c, ier)
-    if(ier .ne. CG_ERROR) then
+    if(ier == 0.0) then
        periodic = .true.
        rotCenter = rotCenter_c
        rotAngles = rotAngles_c
